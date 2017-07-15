@@ -1,0 +1,15 @@
+
+module pgSlashTmp 1.0;
+
+require {
+	type initrc_tmp_t;
+	type postgresql_t;
+	class file { read getattr open };
+}
+
+#============= postgresql_t ==============
+
+# Allow PostgreSQL server to open and read files in /tmp.
+# Required by handle_scanned_votes_bin.
+
+allow postgresql_t initrc_tmp_t:file { read getattr open };

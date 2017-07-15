@@ -1,0 +1,10 @@
+# Disable the escape character.
+escape ""
+
+# Specify the script which generates the polling place name
+# and whether it is pre-polling/polling day/post election.
+backtick 1 0 0 /opt/eVACS/bin/pp_caption.sh
+
+# Now define the caption.
+# Polling place              Status            Date  Time
+caption always "%{= }%1`%-22=%d %M %Y  %c:%s"

@@ -1,0 +1,4 @@
+The election data for 2001 is available from the ACT Electoral commission.
+This code was written to read in the csv format they provide.  Some
+minor modification was made to the data to simplify the input.  These
+changes are listed in the source code create_evacs_database.c.

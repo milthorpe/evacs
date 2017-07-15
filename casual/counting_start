@@ -1,0 +1,277 @@
+#! /bin/sh
+# Start script for the counting server.
+
+# home of executables
+ROOT=/root
+OUTPUTDIR=/tmp
+
+get_menu_option()
+{
+    clear > /dev/tty
+    echo "$@" > /dev/tty
+    echo "Please select one of the following, and press ENTER:" > /dev/tty
+    echo > /dev/tty
+    echo "1) Create postscript barcode files and the setup disk" > /dev/tty
+    echo "2) Setup Counting Server" > /dev/tty
+    echo "3) Load votes from a polling place" > /dev/tty
+    echo "4) Count votes for an electorate" > /dev/tty
+    echo "5) Copy database to zip disk" > /dev/tty
+    echo "6) Restore database from zip disk" > /dev/tty
+    echo "7) Database Vote Summary" > /dev/tty
+    echo "8) Export Ballots to CSV format" > /dev/tty
+    echo "9) Run casual vacancy" > /dev/tty
+    echo "0) Shutdown Counting Server" > /dev/tty
+    read LINE;
+    echo "$LINE";
+}
+
+prompt()
+{
+    echo Press ENTER to return to menu.
+    read
+}
+
+run_hare_clarke()
+{
+    rm -f $OUTPUTDIR/table*
+    RETURN_CODE=`su - postgres -c "$ROOT/hare_clarke && echo 0"`
+    if [ "$RETURN_CODE" != 0 ]; then
+	echo "FATAL ERROR: Hare Clark failed. Aborting ...."
+        return 
+    fi
+    $ROOT/print_scrutiny
+}
+
+run_casual_vacancy()
+{
+    # Note, casual vacancy might not produce these files
+
+    rm -f $OUTPUTDIR/table*
+    RETURN_CODE=`su - postgres -c "$ROOT/vacancy && echo 0"`
+    if [ "$RETURN_CODE" != 0 ]; then
+	echo "FATAL ERROR: Casual Vacancy failed. Aborting ...."
+	return
+    fi
+    # NOTE: Casual vacancy calls print_scrutiny in-line
+    # so that it can loop and do another vacancy on the same electorates'
+    # ballots
+}
+get_dump_option()
+{
+    clear > /dev/tty
+    echo "$@" > /dev/tty
+    echo "Please select one of the following, and press ENTER:" > /dev/tty
+    echo > /dev/tty
+    echo "1) Export Data-Entered paper ballots" > /dev/tty
+    echo "2) Export confirmed votes" > /dev/tty
+    echo "3) Duplicate the last export made this session" > /dev/tty
+    read LINE;
+    echo "$LINE";
+}
+
+split_file()
+{
+    # unzip file
+    echo "uncompressing $file.gz"
+    gunzip -N "${ELEC_PREFIX}.gz"
+    
+    NUM_LINES=`grep -c "" $file`
+    SPLIT_SIZE=`echo "$NUM_LINES / $NUM_DISKS" | bc`
+   
+    echo "creating split files [$NUM_DISKS Disks]"
+    DISK=1
+    SPLIT_FROM=0
+    while [ "$DISK" -le "$NUM_DISKS" ]; do
+  	echo "Creating $OUTPUTDIR/$DISK${ELEC_PREFIX}.csv"
+        let SPLIT_TO=$SPLIT_FROM+$SPLIT_SIZE
+	head "-$SPLIT_TO" $file | tail "-$SPLIT_SIZE" > "$OUTPUTDIR/$DISK${ELEC_PREFIX}.csv"
+	echo "Compressing $OUTPUTDIR/$DISK${ELEC_PREFIX}.csv to $OUTPUTDIR/$DISK${ELEC_PREFIX}.gz"
+	gzip -N --best $OUTPUTDIR/$DISK${ELEC_PREFIX}.csv > /dev/null
+	mv $OUTPUTDIR/$DISK${ELEC_PREFIX}.csv.gz $OUTPUTDIR/$DISK${ELEC_PREFIX}.gz
+	let DISK++
+	let SPLIT_FROM+=$SPLIT_SIZE
+    done
+    echo
+    # delete original expanded file
+    rm $file
+}
+
+change_floppy()
+{
+    while [ -n "$STATUS" ]; do
+	echo "$STATUS" 
+	echo "Please wait for previous file (if any) to complete, then" > /dev/tty
+	echo "insert an empty floppy and press ENTER" > /dev/tty
+	echo "*WARNING*: ALL data on the disk will be erased!!" > /dev/tty
+	read JUNK
+	umount /floppy  2>/dev/null
+	STATUS=`mount -tmsdos /dev/fd0 /floppy 2>&1`
+    done
+    # erase and report
+    rm -rf /floppy/* 2>&1 >/dev/null
+    echo Floppy mounted and Erased. Writing Disk....
+    echo
+}
+
+duplicate_export()
+{
+    # change dir to where the exported ballots are
+    cd $OUTPUTDIR
+
+    for file in *.gz; do
+        STATUS="$file: Saving"
+	change_floppy
+	cp $file /floppy/
+	umount /floppy 2>&1 > /dev/null
+    done
+   
+    STATUS="Saving remaining files"
+    change_floppy
+    cp *.csv /floppy/
+    umount /floppy 2>&1 > /dev/null
+}
+
+dump_ballots()
+{
+    QUIT=""
+    MESSAGE="Please enter your choice"
+    # loop until message is NULL
+    while  [ -n "$MESSAGE" ]   ; do
+	case `get_dump_option $MESSAGE` in
+	    1) su - postgres -c"$ROOT/export_ballots"; MESSAGE="";;
+	    2) su - postgres -c"$ROOT/export_confirmed"; MESSAGE="";;
+	    3) duplicate_export; MESSAGE=""; QUIT=1;;
+	    *) MESSAGE="ERROR: UNKNOWN OPTION SELECTED.";; 
+	esac
+    done
+
+    # process newly generated ballot export
+    if [ -z "$QUIT" ] ;then
+	# now zip & transfer to floppy the (large) formal ballot files
+	cd $OUTPUTDIR
+	for file in *_form.csv; do
+	    echo; echo
+	    echo "$file: Compressing... "
+	    gzip -N --best $file
+	    
+	    #rename file for msdos disk (remove .csv portion of filename)
+	    #Br_form.csv.gz => Br_form.gz
+	    # first 2 chars of file indicate electorate
+	    ELEC_PREFIX=`echo $file | head -c7` 
+	    mv $file.gz ${ELEC_PREFIX}.gz
+	    
+	    # split and rezip if greater than 1414000 bytes (i.e. floppy)
+	    # ASSUMES 2 floppies will always be enough
+	    SIZE=`ls -s $OUTPUTDIR/${ELEC_PREFIX}.gz | sed "s/^ *//" | cut -d\  -f1`
+	    if [ $SIZE -gt 1414 ]; then
+		echo "$file.gz is ${SIZE}K; splitting"
+		NUM_DISKS=`echo "$SIZE / 1414 + 1" | bc` 
+		split_file
+		DISK=1
+		while [ "$DISK" -le "$NUM_DISKS" ]; do
+		    STATUS="Disk $DISK of $file: Saving..."
+		    change_floppy
+		    cp $OUTPUTDIR/$DISK${ELEC_PREFIX}.gz /floppy/
+		    umount /floppy 2>&1 > /dev/null
+		    let DISK++
+		done
+	    
+	    else
+		STATUS="$file: Saving... "
+		change_floppy
+		cp $OUTPUTDIR/${ELEC_PREFIX}.gz /floppy/
+	    fi
+	done
+	
+	# Now copy the rest of the files to another floppy
+	STATUS="Saving remaining files"
+	change_floppy
+
+	# paper_vs.csv can be greater then 2M
+	# if it is there - compress it
+	if [ -a "$OUTPUTDIR/paper_vs.csv" ]; then
+	    gzip -N --best "$OUTPUTDIR/paper_vs.csv"
+	    mv "$OUTPUTDIR/paper_vs.csv.gz" "$OUTPUTDIR/paper_vs.gz"
+	    cp "$OUTPUTDIR/paper_vs.gz" /floppy/
+	fi
+	cp $OUTPUTDIR/*.csv /floppy/
+	umount /floppy  2>&1 >/dev/null    
+    fi
+	 
+    cd $ROOT
+}
+
+display_summary()
+{
+    NUM_ELECS=`su - postgres -c"psql evacs <<EOF
+SELECT COUNT(*) from electorate;
+EOF"| sed 's/^ *//g' | tail -3 | head -1`
+
+    ELECS=`su - postgres -c"psql evacs <<EOF
+SELECT name from electorate;
+EOF"| sed 's/^ *//g' | tail -"$(($NUM_ELECS+2))" | head -"$NUM_ELECS"`
+
+    echo Confirmed Votes:
+
+    for ELECTORATE in $ELECS; do
+        CODE=`su - postgres -c"psql evacs <<EOF
+SELECT code from electorate where name='$ELECTORATE';
+EOF" |  sed 's/^ *//g' | tail -3 | head -1`
+        INF_IX=`echo "$CODE * 2" | bc`
+	echo -n "$CODE          $ELECTORATE Total: "
+
+        VOTES[$CODE]=`su - postgres -c"psql evacs <<EOF
+SELECT count(*) from confirmed_vote where electorate_code=$CODE;
+EOF" | sed 's/^ *//g' | tail -3 | head -1`
+	echo -n "${VOTES[$CODE]} Informal: "
+
+	VOTES[$INF_IX]=`su - postgres -c"psql evacs <<EOF
+SELECT count(*) from confirmed_vote where electorate_code=$CODE and 
+NOT EXISTS (SELECT * from confirmed_preference where vote_id=id);
+EOF" | sed 's/^ *//g' | tail -3 | head -1`
+	echo "${VOTES[$INF_IX]}"
+    done
+}
+
+
+#Start apache
+/etc/init.d/apache start
+
+#probe for the zip drive
+modprobe imm
+
+# Change into root's home dir, where all the scripts are.
+cd $ROOT
+
+while true; do
+
+# Main menu.
+     case `get_menu_option $MESSAGE` in
+	1) rm -rf /tmp/setup;$ROOT/setup_election.sh; prompt; MESSAGE="";;
+	2) $ROOT/setup; $ROOT/pg_users.pl /etc/passwd;prompt; MESSAGE="";;
+	3) $ROOT/load_votes.sh; prompt; MESSAGE="";;
+	4) run_hare_clarke; prompt; MESSAGE="";;
+	5) $ROOT/dump_evacs.sh; prompt; MESSAGE="";;
+	6) $ROOT/restore_evacs.sh; prompt; MESSAGE="";; 
+	7) display_summary; prompt; MESSAGE="";;
+	8) dump_ballots; prompt; MESSAGE="";;
+	9) run_casual_vacancy; prompt; MESSAGE="";;
+	0) /sbin/shutdown -h now;;
+	*) MESSAGE="ERROR: UNKNOWN OPTION SELECTED.";;
+     esac
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

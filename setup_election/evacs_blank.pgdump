@@ -1,0 +1,443 @@
+
+CREATE TABLE robson_rotation_5 (
+    rotation_num integer NOT NULL,
+    rotation integer[] NOT NULL
+);
+
+
+
+CREATE TABLE robson_rotation_7 (
+    rotation_num integer NOT NULL,
+    rotation integer[] NOT NULL
+);
+
+
+
+-- SIPL 2014-02-07 Support electorates with nine seats.
+CREATE TABLE robson_rotation_9 (
+    rotation_num integer NOT NULL,
+    rotation integer[] NOT NULL
+);
+
+
+
+CREATE TABLE master_data (
+    election_name text,
+    election_date text,
+    password_hash text,
+    password_hash_date_time text
+);
+
+
+CREATE TABLE server_parameter (
+    id integer NOT NULL,
+    polling_place_code integer NOT NULL
+);
+
+
+CREATE TABLE electorate (
+    code integer NOT NULL,
+    name text NOT NULL,
+    seat_count integer NOT NULL,
+    number_of_electors integer,
+    font_name text,
+    fg_colour text,
+    bg_colour text,
+    font_size integer,
+    number_of_cols integer,
+    number_of_rows integer
+);
+
+
+
+CREATE TABLE party (
+    electorate_code integer NOT NULL,
+    "index" integer NOT NULL,
+    name text NOT NULL,
+    abbreviation text,
+    column_letter text
+);
+
+
+
+CREATE TABLE candidate (
+    electorate_code integer NOT NULL,
+    party_index integer NOT NULL,
+    "index" integer NOT NULL,
+    name text NOT NULL,
+    sitting_member boolean DEFAULT false
+);
+
+
+
+-- SIPL 2011-08-29 Added support for pre-polling in a distinct
+--   polling place code (pre_polling_code).  Also, added "NOT NULL"
+--   qualifier to electorate_code.
+CREATE TABLE polling_place (
+    code integer NOT NULL,
+    pre_polling_code integer NOT NULL,
+    name text NOT NULL,
+    loaded boolean DEFAULT false NOT NULL,
+    electorate_code integer NOT NULL
+);
+
+
+
+CREATE TABLE barcode (
+    hash bit(160) NOT NULL,
+    polling_place_code integer NOT NULL,
+    electorate_code integer NOT NULL,
+    used boolean DEFAULT false NOT NULL
+);
+
+
+
+CREATE TABLE vote_summary (
+    electorate_code integer NOT NULL,
+    polling_place_code integer NOT NULL,
+    entered_by text NOT NULL,
+    entered_at timestamp with time zone NOT NULL,
+    informal_count integer NOT NULL
+);
+
+
+
+CREATE TABLE preference_summary (
+    electorate_code integer NOT NULL,
+    polling_place_code integer NOT NULL,
+    party_index integer NOT NULL,
+    candidate_index integer NOT NULL,
+    phoned_primary integer NOT NULL,
+    evacs_primary integer NOT NULL,
+    final_count integer NOT NULL
+);
+
+
+
+CREATE TABLE scrutiny (
+    electorate_code integer NOT NULL,
+    exhausted_votes integer NOT NULL,
+    loss_by_fraction integer NOT NULL
+);
+
+
+
+CREATE TABLE scrutiny_pref (
+    electorate_code integer NOT NULL,
+    party_index integer NOT NULL,
+    candidate_index integer NOT NULL,
+    after_preferences integer NOT NULL
+);
+
+
+
+CREATE TABLE batch (
+    number integer NOT NULL,
+    polling_place_code integer NOT NULL,
+    electorate_code integer NOT NULL,
+    size integer,
+    "committed" boolean DEFAULT false NOT NULL
+);
+
+
+
+CREATE SEQUENCE batch_history_id_seq
+    START 1
+    INCREMENT 1
+    MAXVALUE 999999999
+    MINVALUE 1
+    CACHE 1;
+
+
+
+CREATE TABLE batch_history (
+    id integer DEFAULT nextval('"batch_history_id_seq"'::text) NOT NULL,
+    batch_number integer NOT NULL,
+    operator_id text NOT NULL,
+    time_stamp text NOT NULL,
+    op_code integer NOT NULL,
+    data1 integer NOT NULL,
+    data2 integer NOT NULL
+);
+
+
+
+CREATE SEQUENCE duplicate_entries_id_seq
+    START 1
+    INCREMENT 1
+    MAXVALUE 999999999
+    MINVALUE 1
+    CACHE 1;
+
+
+
+CREATE TABLE duplicate_entries (
+    id integer DEFAULT nextval('"duplicate_entries_id_seq"'::text) NOT NULL,
+    history_id integer NOT NULL,
+    batch_number integer NOT NULL,
+    paper_index integer NOT NULL,
+    entry_index integer NOT NULL,
+    operator_id text NOT NULL,
+    paper_version integer NOT NULL,
+    preference_list text
+);
+
+
+
+CREATE TABLE column_splits (
+    electorate_code integer NOT NULL,
+    party_index integer NOT NULL,
+    physical_column_index integer NOT NULL,
+    candidate_count integer NOT NULL
+);
+
+
+
+
+CREATE UNIQUE INDEX electorate_name_key ON electorate USING btree (name);
+
+
+
+CREATE INDEX candidate_ep_idx ON candidate USING btree (electorate_code, party_index);
+
+
+
+CREATE UNIQUE INDEX polling_place_name_key ON polling_place USING btree (name);
+
+
+
+CREATE INDEX barcode_ecode_idx ON barcode USING btree (electorate_code);
+
+
+
+CREATE INDEX barcode_ppcode_idx ON barcode USING btree (polling_place_code);
+
+
+
+CREATE INDEX batch_num_idx ON batch USING btree (number);
+
+
+
+ALTER TABLE ONLY robson_rotation_5
+    ADD CONSTRAINT robson_rotation_5_pkey PRIMARY KEY (rotation_num);
+
+
+
+ALTER TABLE ONLY robson_rotation_7
+    ADD CONSTRAINT robson_rotation_7_pkey PRIMARY KEY (rotation_num);
+
+
+
+-- SIPL 2014-03-24 Support electorates with nine seats.
+ALTER TABLE ONLY robson_rotation_9
+    ADD CONSTRAINT robson_rotation_9_pkey PRIMARY KEY (rotation_num);
+
+
+
+ALTER TABLE ONLY electorate
+    ADD CONSTRAINT electorate_pkey PRIMARY KEY (code);
+
+
+
+ALTER TABLE ONLY party
+    ADD CONSTRAINT party_pkey PRIMARY KEY (electorate_code, "index");
+
+
+ALTER TABLE ONLY candidate
+    ADD CONSTRAINT candidate_pkey PRIMARY KEY (electorate_code, party_index, "index");
+
+
+
+ALTER TABLE ONLY polling_place
+    ADD CONSTRAINT polling_place_pkey PRIMARY KEY (code);
+
+
+
+ALTER TABLE ONLY barcode
+    ADD CONSTRAINT barcode_pkey PRIMARY KEY (hash);
+
+
+
+ALTER TABLE ONLY preference_summary
+    ADD CONSTRAINT preference_summary_pkey PRIMARY KEY (electorate_code, polling_place_code, party_index, candidate_index);
+
+
+
+ALTER TABLE ONLY scrutiny
+    ADD CONSTRAINT scrutiny_pkey PRIMARY KEY (electorate_code);
+
+
+
+ALTER TABLE ONLY scrutiny_pref
+    ADD CONSTRAINT scrutiny_pref_pkey PRIMARY KEY (electorate_code, party_index, candidate_index);
+
+
+
+ALTER TABLE ONLY batch
+    ADD CONSTRAINT batch_pkey PRIMARY KEY (number);
+
+
+
+ALTER TABLE ONLY batch_history
+    ADD CONSTRAINT batch_history_pkey PRIMARY KEY (id);
+
+
+
+ALTER TABLE ONLY duplicate_entries
+    ADD CONSTRAINT duplicate_entries_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY column_splits
+    ADD CONSTRAINT column_splits_pkey PRIMARY KEY (electorate_code, party_index, physical_column_index);
+
+
+ALTER TABLE party
+  ADD CONSTRAINT party_electorate_fk
+  FOREIGN KEY (electorate_code)
+  REFERENCES electorate (code);
+
+ALTER TABLE candidate
+  ADD CONSTRAINT candidate_party_fk
+  FOREIGN KEY (electorate_code, party_index)
+  REFERENCES party (electorate_code, index);
+
+ALTER TABLE polling_place
+  ADD CONSTRAINT polling_place_electorate_fk
+  FOREIGN KEY (electorate_code)
+  REFERENCES electorate (code);
+
+ALTER TABLE barcode
+  ADD CONSTRAINT barcode_polling_place_fk
+  FOREIGN KEY (polling_place_code)
+  REFERENCES polling_place (code);
+
+ALTER TABLE barcode
+  ADD CONSTRAINT barcode_electorate_fk
+  FOREIGN KEY (electorate_code)
+  REFERENCES electorate (code);
+
+ALTER TABLE vote_summary
+  ADD CONSTRAINT vote_summary_electorate_fk
+  FOREIGN KEY (electorate_code)
+  REFERENCES electorate (code);
+
+ALTER TABLE vote_summary
+  ADD CONSTRAINT vote_summary_polling_place_fk
+  FOREIGN KEY (polling_place_code)
+  REFERENCES polling_place (code);
+
+ALTER TABLE preference_summary
+  ADD CONSTRAINT preference_summary_electorate_fk
+  FOREIGN KEY (electorate_code)
+  REFERENCES electorate (code);
+
+ALTER TABLE preference_summary
+  ADD CONSTRAINT preference_summary_polling_place_fk
+  FOREIGN KEY (polling_place_code)
+  REFERENCES polling_place (code);
+
+ALTER TABLE preference_summary
+  ADD CONSTRAINT preference_summary_candidate_fk
+  FOREIGN KEY (electorate_code, party_index, candidate_index)
+  REFERENCES candidate (electorate_code, party_index, index);
+
+ALTER TABLE scrutiny
+  ADD CONSTRAINT scrutiny_electorate_fk
+  FOREIGN KEY (electorate_code)
+  REFERENCES electorate (code);
+
+ALTER TABLE scrutiny_pref
+  ADD CONSTRAINT scrutiny_pref_candidate_fk
+  FOREIGN KEY (electorate_code, party_index, candidate_index)
+  REFERENCES candidate (electorate_code, party_index, index);
+
+ALTER TABLE batch
+  ADD CONSTRAINT batch_polling_place_fk
+  FOREIGN KEY (polling_place_code)
+  REFERENCES polling_place (code);
+
+ALTER TABLE batch
+  ADD CONSTRAINT batch_electorate_fk
+  FOREIGN KEY (electorate_code)
+  REFERENCES electorate (code);
+
+ALTER TABLE batch_history
+  ADD CONSTRAINT batch_history_batch_fk
+  FOREIGN KEY (batch_number)
+  REFERENCES batch (number);
+
+ALTER TABLE duplicate_entries
+  ADD CONSTRAINT duplicate_entries_batch_history_fk
+  FOREIGN KEY (history_id)
+  REFERENCES batch_history (id);
+
+ALTER TABLE duplicate_entries
+  ADD CONSTRAINT duplicate_entries_batch_fk
+  FOREIGN KEY (batch_number)
+  REFERENCES batch (number);
+
+ALTER TABLE column_splits
+  ADD CONSTRAINT column_splits_partyidx_fk
+  FOREIGN KEY (electorate_code, party_index)
+  REFERENCES party (electorate_code, index);
+
+CREATE GROUP evacs_group;
+
+CREATE USER deo1    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo2    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo3    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo4    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo5    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo6    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo7    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo8    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo9    NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo10   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo11   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo12   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo13   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo14   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo15   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo16   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo17   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo18   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo19   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo20   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo21   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo22   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo23   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo24   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo25   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo26   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo27   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo28   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo29   NOCREATEDB IN GROUP evacs_group;
+CREATE USER deo30   NOCREATEDB IN GROUP evacs_group;
+CREATE USER super1  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super2  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super3  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super4  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super5  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super6  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super7  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super8  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super9  NOCREATEDB IN GROUP evacs_group;
+CREATE USER super10 NOCREATEDB IN GROUP evacs_group;
+
+
+--  Data Entry user permissions
+GRANT ALL ON batch TO GROUP evacs_group;
+GRANT ALL ON batch_history TO GROUP evacs_group;
+GRANT ALL ON batch_history_id_seq TO GROUP evacs_group;
+GRANT ALL ON candidate TO GROUP evacs_group;
+GRANT ALL ON column_splits TO GROUP evacs_group;
+GRANT ALL ON duplicate_entries TO GROUP evacs_group;
+GRANT ALL ON duplicate_entries_id_seq TO GROUP evacs_group;
+GRANT ALL ON electorate TO GROUP evacs_group;
+GRANT ALL ON party TO GROUP evacs_group;
+GRANT ALL ON polling_place TO GROUP evacs_group;
+GRANT ALL ON preference_summary TO GROUP evacs_group;
+GRANT ALL ON robson_rotation_5 TO GROUP evacs_group;
+GRANT ALL ON robson_rotation_7 TO GROUP evacs_group;
+-- SIPL 2014-03-24 Support electorates with nine seats.
+GRANT ALL ON robson_rotation_9 TO GROUP evacs_group;
+GRANT ALL ON vote_summary TO GROUP evacs_group;

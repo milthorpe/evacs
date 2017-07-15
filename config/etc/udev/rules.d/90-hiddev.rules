@@ -1,0 +1,3 @@
+# SIPL 2014-05-19 Respond to hiddev events.
+
+SUBSYSTEM=="usb", KERNEL=="hiddev*", RUN+="/etc/udev/scripts/hiddev.sh %n"

@@ -1,0 +1,5 @@
+# eVACS.  This setting is copied, without modification,
+# from /etc/rc.d/init.d/postgresql.  The setting has been
+# copied here so that it can (also) be sourced by
+# /etc/rc.d/init.d/evacs.
+PGDATA=/var/lib/pgsql/data

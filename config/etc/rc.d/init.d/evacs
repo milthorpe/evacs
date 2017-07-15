@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# evacs       eVACS configuration
+# chkconfig:  2345 95 5
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+start() {
+  /opt/eVACS/bin/fixXorgVideoDriver.sh
+}
+
+case "$1" in
+    start)
+        start
+        RETVAL=$?
+        ;;
+    stop)
+        RETVAL=0
+        ;;
+    *)
+        echo $"Usage: eVACS {start|stop}"
+        RETVAL=2
+        ;;
+esac
+
+exit $RETVAL

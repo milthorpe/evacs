@@ -1,0 +1,108 @@
+
+NOTES ON EVACS DATA TABLES AND CSV FILE FORMATS
+======================================================================
+
+
+
+CSV FILE FORMATS
+======================================================================
+
+Here is a brief description of what the CSV records look like.  Full descriptions and
+documentation are provided by the ACT Electoral commission with the election data.  The
+fields are given a descriptiove name and a type in parentheses.  The description 'Code'
+generally corresponds to its use as or within a key.  Note that the UniqueIndexID is just
+a unique integer for each record on a PER FILE basis.
+
+(1) ELECTORATES file: NOTE we simplified and extended the electorates file supplied with
+the ACT 2001 elction data.  The new version includes the number of seats in an electorate.
+ 
+Electorate Code (integer/key), Electorate Name (string), Number of Seats (integer), Electorate Colour (string)
+
+(2) CANDIDATES file: Note the candidate code is an index inside each party, i.e. (ignoring
+the UniqueIndexID) the primary key (for the csv table) would be Electorate Code +
+Party/Group Code + Candidate Code.
+
+UniqueIndexID(integer), Electorate Code (integer), Party/Group Code (integer), Candidate Code (integer), Candidate Name (string)
+
+(3) GROUPS (parties) file
+
+UniqueIndexID(integer), Electorate Code (integer), Party/Group Code (integer), Party/Group Name (string), Party/Group Abbreviation (string), Number of fielded Candidates (integer)
+
+(4) BALLOTS files: Note there are separate files for each electorate and voting method
+(electronic/paper) in the ACT 2001 election data.  This is dealt with within the code.  A
+Batch is a collection of papers.  Each paper within a batch has an index.  In the 2001 ACT
+Election data each electronic vote has its own batch.
+
+UniqueIndexID(integer), Batch Code (integer), Batch Index (integer), Preference Number (integer), Candidate Code (integer), Party/Group Code (integer), Robson Rotation Position (inetger)
+
+
+
+TABLE CREATION SOURCE CODE
+======================================================================
+
+
+From common/createtables.c
+	create_table(conn,"electorate",
+		     "code INTEGER PRIMARY KEY,"
+		     "name TEXT NOT NULL UNIQUE,"
+		     "seat_count INTEGER NOT NULL,"
+		     "number_of_electors INTEGER,"
+		     "colour TEXT");
+
+	create_table(conn,"party",
+		     "electorate_code INTEGER NOT NULL "
+		     "REFERENCES electorate(code),"
+		     "index INTEGER NOT NULL,"
+		     "name TEXT NOT NULL,"
+		     "abbreviation TEXT,"
+		     "PRIMARY KEY(electorate_code,index)");
+
+	create_table(conn,"candidate",
+		     "electorate_code INTEGER NOT NULL,"
+		     "party_index INTEGER NOT NULL,"
+		     "index INTEGER NOT NULL,"
+		     "name TEXT NOT NULL,"
+		     "sitting_member BOOL DEFAULT false,"
+		     "FOREIGN KEY (electorate_code,party_index) "
+		     "REFERENCES party(electorate_code,index),"
+		     "PRIMARY KEY(electorate_code,party_index,index)");
+
+	create_table(conn,"party",
+		     "electorate_code INTEGER NOT NULL "
+		     "REFERENCES electorate(code),"
+		     "index INTEGER NOT NULL,"
+		     "name TEXT NOT NULL,"
+		     "abbreviation TEXT,"
+		     "PRIMARY KEY(electorate_code,index)");
+
+	create_table(conn,"confirmed_vote",
+		     /* "id SERIAL PRIMARY KEY," */
+		     "id INTEGER NOT NULL PRIMARY KEY "
+		     "DEFAULT NEXTVAL('confirmed_vote_id_seq'),"
+		     "electorate_code INTEGER NOT NULL "
+		     "REFERENCES electorate(code),"
+		     "polling_place_code INTEGER NOT NULL");
+
+	create_table(conn,"confirmed_preference",
+		     "vote_id INTEGER NOT NULL "
+		     "REFERENCES confirmed_vote(id) "
+		     "DEFAULT CURRVAL('confirmed_vote_id_seq'),"
+		     "group_index INTEGER NOT NULL,"
+		     "db_candidate_index INTEGER NOT NULL,"
+		     "prefnum INTEGER NOT NULL "
+		     "CHECK(prefnum BETWEEN 1 AND 99),"
+		     "PRIMARY KEY (vote_id,prefnum)");
+
+From _build_database/create_evacs_database.c
+	create_table(conn,"csv_vote_entry",
+		"electorate_code INTEGER NOT NULL "
+	       "REFERENCES electorate(code),"
+	       "batch INTEGER NOT NULL,"
+	       "batch_index INTEGER NOT NULL,"
+	       "pref_num INTEGER NOT NULL,"
+	       "candidate_index INTEGER NOT NULL,"
+	       "party_index INTEGER NOT NULL,"
+	       "FOREIGN KEY(electorate_code,party_index,candidate_index)"
+	       "REFERENCES candidate(electorate_code,party_index,index),"
+	       "PRIMARY KEY (electorate_code,batch,batch_index,pref_num)" 
+	       );

@@ -1,0 +1,3 @@
+PGDATA=/usr/lib/pgsql-slave/data
+PGPORT=5433
+PGLOG=/var/log/pgsql-slave
