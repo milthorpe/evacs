@@ -157,7 +157,7 @@ int sock_printf(int sock, const char *format, ...)
 }
 
 /* read to EOF on a socket, and return a buffer of bytes and the count */
-void *sock_load(int sock, unsigned int *n)
+void *sock_load(int sock, size_t *n)
 {
 	char *p;
 	int r;
