@@ -6,12 +6,14 @@ MASTER:=1
 # C compilation flags.
 # eVACS 2008 has:
 #  CFLAGS:=-Wall -Wwrite-strings -Wmissing-prototypes -mcpu=i486 -O3 #-g -Wundef
-CFLAGS:=-Wall -Wwrite-strings -Wmissing-prototypes -I/usr/include/postgresql -Wno-error=int-to-pointer-cast -g#-Wundef
+CFLAGS:=-Wall -Wwrite-strings -Wmissing-prototypes -I/usr/include/postgresql -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -Wno-error=int-to-pointer-cast -g#-Wundef
+LDLIBS+=-lglib-2.0
 
 # Timeout (seconds) for each test.
 TIMEOUT:=60
 
-DIRS:=backup/ common/ counting/ data_correction/ data_entry/ load_scanned_votes/ load_votes/ setup_election/ setup_polling_place/ voting_client/ voting_client_stripped/ voting_server/ tools/
+# NOTE: missing code for data_correction data_entry setup_election
+DIRS:=backup/ common/ counting/ load_scanned_votes/ load_votes/ setup_polling_place/ voting_client/ voting_client_stripped/ voting_server/ tools/ # data_entry/ data_correction/ setup_election/ 
 
 default: binaries
 

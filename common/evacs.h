@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <glib.h>
 
 /* C trick to stringize a constant (expand to the number first) */
 #define _STRINGIZE(x) #x
@@ -113,9 +114,8 @@ extern void set_bailout(void (*bailoutfunc)(const char *fmt, va_list ap)
 /* Call the bailout function */
 extern void bailout(const char *fmt, ...)
 __attribute__((noreturn, format (printf,1,2)));
-extern char *vsprintf_malloc(const char *fmt, va_list arglist);
-extern char *sprintf_malloc(const char *fmt, ...)
-     __attribute__ ((format(printf,1,2)));
+#define vsprintf_malloc g_strdup_vprintf
+#define sprintf_malloc g_strdup_printf
 extern char *fgets_malloc(FILE *stream);
 
 extern void create_directory(mode_t mode,const char *fmt, ...)

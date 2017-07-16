@@ -151,63 +151,6 @@ static int strip_nl(char *s)
     return(0);
 }
 
-/*
-	sprintf_malloc and fgets_malloc perform a similar function
-	to calling malloc and sprintf and malloc and fgets respectively.
-
-	Each function allocates the memory it needs to perform its
-	operation. They return a pointer to the newly allocated
-	memory.
-
-	These functions have the word malloc in them to remind the 
-	programmer that they allocate storage that must therefore
-	be freed at some time.
-
-	free_safe() MUST be used to free the pointers returned by these
-	functions since malloc_safe() was used to allocate the storage.
-	Failure to do so may cause a "memory leak" bailout before
-	returning from the top-level function.
-*/
-     
-char *vsprintf_malloc(const char *fmt, va_list arglist)
-     /*
-       This is a self-allocating vsprintf function.
-       
-       NOTE: This function allocates memory. It is
-       the callers responsibility to free it after
-       use. Also, this function does not call va_end.
-       It is the callers responsibility to do this.
-      */
-
-{
-  char *str=NULL;
-
-  /* Allocate amount of space indicated by vsnprintf */
-
-  str = (char *)malloc(vsnprintf(str,0,fmt,arglist)+1);
-
-  /* Write into string for real this time */
-
-  vsprintf(str,fmt,arglist);
-  return(str);
-}
-
-char *sprintf_malloc(const char *fmt, ...)
-     /*
-       Variable number of parameter interface to vsprintf_malloc().
-     */
-     
-{
-  char *str;
-  va_list arglist;
-  
-  va_start(arglist,fmt);
-  str = vsprintf_malloc(fmt,arglist);
-  va_end(arglist);
-  
-  return(str);
-}
-
 char *fgets_malloc(FILE *stream)
      /*
        Returns a pointer to the next line of text read from
