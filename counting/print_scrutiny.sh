@@ -30,14 +30,14 @@ SHRINK="0.5"
 OUTPUTDIR="/tmp"
 
 # root directory (where the scripts are)
-SCRIPTROOT=/opt/eVACS/bin
+SCRIPTROOT=$PWD
 
 # command to convert ps into bitmap
 GSCOMMAND="gs -q -sDEVICE=$PRINTER_DEVICE -r600x600 -sPAPERSIZE=$PAPERSIZE -dNOPAUSE -dSAFER -sOutputFile=$OUTPUTDIR/raw"
 
 # SIPL 2014-03-26 Custom poster command
-POSTER=$SCRIPTROOT/poster
-
+#POSTER=$SCRIPTROOT/poster
+POSTER=poster
 
 # post-process ps to BOLD 'so& so was elected n' statements in table2
 $SCRIPTROOT/bold_elected.pl $OUTPUTDIR/table2.ps
@@ -50,9 +50,11 @@ rm -f  $OUTPUTDIR/table2.ps.bold
 #   like the extraneous "showpage" operators.
 #   "-C 7" means include cutmark lines, arrow heads, and grid labels.
 cat $OUTPUTDIR/table1.ps | ps2eps -q -g | grep -v '^showpage$' | \
-  $POSTER -m$PAPERSIZE -s$SHRINK -C 7 > $OUTPUTDIR/table1.ps.poster
+#  $POSTER -m$PAPERSIZE -s$SHRINK -C 7 > $OUTPUTDIR/table1.ps.poster
+  $POSTER -m$PAPERSIZE -s$SHRINK > $OUTPUTDIR/table1.ps.poster
 cat $OUTPUTDIR/table2.ps | ps2eps -q -g | grep -v '^showpage$' | \
-  $POSTER -m$PAPERSIZE -s$SHRINK -C 7 > $OUTPUTDIR/table2.ps.poster
+#  $POSTER -m$PAPERSIZE -s$SHRINK -C 7 > $OUTPUTDIR/table2.ps.poster
+  $POSTER -m$PAPERSIZE -s$SHRINK > $OUTPUTDIR/table2.ps.poster
 
 # Previous command was:
 #$SCRIPTROOT/normalise.pl $PAPERSIZE $OUTPUTDIR/table1.ps $OUTPUTDIR/table2.ps
@@ -88,6 +90,6 @@ else
 fi
 
 # remove normalised pages ready for another scrutiny
-rm -f $OUTPUTDIR/table*.ps*
+#rm -f $OUTPUTDIR/table*.ps*
 
 exit 0	
