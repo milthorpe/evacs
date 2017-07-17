@@ -480,11 +480,12 @@ static void insert_confirmed_csv_ballots(PGconn *conn, int electorate_code)
     /* READ AND LOAD THE VOTE */
     pref_string = get_csv_pref_string(result,&record_count);
     SQL_command(conn,
-		"INSERT INTO confirmed_vote"
-		"(electorate_code, polling_place_code) "
-		"VALUES(%u,%u);",
-		electorate_code,
-		0);
+		"INSERT INTO %s_confirmed_vote"
+		"(batch_number, preference_list) "
+		"VALUES(%u,'%s');",
+		PQgetvalue(result_electorate_name, 0, 0),
+		pref_record.batch,
+		pref_string);
     free(pref_string);
     ++primary_count;
   }
@@ -590,14 +591,14 @@ static void load_act_ballots(PGconn *conn)
   */
 
 
-  //load_ballots_for_electorate(conn, 1, "BrindabellaTotal.txt");  
-  //load_ballots_for_electorate(conn, 2, "GinninderraTotal.txt");  
-  //load_ballots_for_electorate(conn, 3, "KurrajongTotal.txt");  
-  //load_ballots_for_electorate(conn, 4, "MurrumbidgeeTotal.txt");  
-  //load_ballots_for_electorate(conn, 5, "YerrabiTotal.txt");  
+  load_ballots_for_electorate(conn, 1, "BrindabellaTotal.txt");  
+  load_ballots_for_electorate(conn, 2, "GinninderraTotal.txt");  
+  load_ballots_for_electorate(conn, 3, "KurrajongTotal.txt");  
+  load_ballots_for_electorate(conn, 4, "MurrumbidgeeTotal.txt");  
+  load_ballots_for_electorate(conn, 5, "YerrabiTotal.txt");  
 
   /* load_csv_batch_pp_entry(conn, "PollingPlaceBatchNumbers.txt"); */
-  //load_polling_place_and_batch(conn); 
+  load_polling_place_and_batch(conn); 
   
   insert_confirmed_csv_ballots(conn, 1);  
   insert_confirmed_csv_ballots(conn, 2);
@@ -682,10 +683,10 @@ static void create_and_load_evacs_tables(PGconn *conn)
   /*
     NOTE: the create_table calls drop the table first
   */
-  //create_electorate_table(conn);
-  //create_party_table(conn);
-  //create_candidate_table(conn);
-  //create_csv_pref_entry_table(conn);
+  create_electorate_table(conn);
+  create_party_table(conn);
+  create_candidate_table(conn);
+  create_csv_pref_entry_table(conn);
 
 
 
@@ -693,18 +694,18 @@ static void create_and_load_evacs_tables(PGconn *conn)
     NOTE: The electorates defn has to be loaded before the confirmed vote
     tables are created.
   */
-  //load_electorates(conn);
+  load_electorates(conn);
 
-  //create_polling_place_table(conn);
-  //create_batch_table(conn); 
-  //create_confirmed_vote_table(conn);
-  //create_csv_batch_pp_table(conn);
-
-
+  create_polling_place_table(conn);
+  create_batch_table(conn); 
+  create_confirmed_vote_tables(conn);
+  create_csv_batch_pp_table(conn);
 
 
-  //load_groups(conn);
-  //load_candidates(conn);
+
+
+  load_groups(conn);
+  load_candidates(conn);
   load_act_ballots(conn); 
 
 
@@ -763,7 +764,7 @@ int main(int argc, char *argv[])
   }
 
   /* Drop and recreate database */
-  //clean_database(DATABASE_NAME);  
+  clean_database(DATABASE_NAME);  
 
   printf("Connecting to database %s\n", DATABASE_NAME);
   conn = connect_db(DATABASE_NAME);
