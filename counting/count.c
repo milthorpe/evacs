@@ -96,9 +96,9 @@ static bool maybe_exclude(struct candidate *cand, void *unused)
 
 	printf("Candidate `%s' from `%s' [y/N]: ",
 	       cand->name, cand->group->name);
-	answer = fgets_malloc(stdin);
+	get_next_line(&answer);
 
-	c = answer[0];
+	c = answer[0]; 
 	free(answer);
 	if (toupper(c) == 'Y')
 		cand->status = CAND_EXCLUDED;
@@ -111,7 +111,7 @@ static void prompt_for_deceased(struct cand_list *candidates)
 	char *answer;
 
 	printf("Are any candidates deceased? [y/N]: ");
-	answer = fgets_malloc(stdin);
+	get_next_line(&answer);
 
 	/* Nothing to do if no candidates deceased. */
 	if (answer[0] != 'y' && answer[0] != 'Y') {
@@ -382,7 +382,7 @@ static struct candidate *prompt_for_tie(const char *reason,
 
 	do {
 		printf("\nEnter name of candidate to select: ");
-		candname = fgets_malloc(stdin);
+		get_next_line(&candname);
 		chosen_list = any_candidates(candidates, &match_name,candname);
 	} while (!chosen_list);
 
@@ -865,7 +865,7 @@ static bool place_in_pile(struct ballot *ballot, void *piles_pointer)
   /* Find first empty pile, or that came in on same count. */
   
   for (i = 0; piles[i]; i++) {
-    assert(i < (PREFNUM_MAX * MAX_COUNTS));
+    assert(i < (MAX_COUNTS));
     
     if (piles[i]->ballot->count_transferred
 	== ballot->count_transferred) {
@@ -895,7 +895,7 @@ static bool exclude_one_candidate(struct cand_list *candidates,
 	 assuming PREFNUM_MAX candidates and a different vote_value
 	at each count and all candidates continue until the last count.
 	In practice there will be duplicate vote_values.*/
-	struct ballot_list *piles[PREFNUM_MAX * MAX_COUNTS] = { NULL };
+	struct ballot_list *piles[MAX_COUNTS] = { NULL };
 
 	/* STEP 30b */
 	cand->status = CAND_BEING_EXCLUDED;
@@ -985,6 +985,7 @@ void do_count(struct election *e,
 
 	fprintf(stderr, "Calculating Quota\n");
 	quota = calculate_quota(e->electorate, ballots);
+	fprintf(stderr, "Quota is %u\n", quota);
 
 	/* STEP 3 */
 	for_each_candidate(e->candidates, &mark_continuing, NULL);

@@ -116,7 +116,7 @@ extern void bailout(const char *fmt, ...)
 __attribute__((noreturn, format (printf,1,2)));
 #define vsprintf_malloc g_strdup_vprintf
 #define sprintf_malloc g_strdup_printf
-extern char *fgets_malloc(FILE *stream);
+extern ssize_t get_next_line(char **line);
 
 extern void create_directory(mode_t mode,const char *fmt, ...)
      __attribute__ ((format(printf,2,3)));

@@ -32,7 +32,8 @@ static struct electorate *prompt_for_electorate(PGconn *conn)
 
 	do {
 		printf("Please enter the electorate name to count: ");
-		name = fgets_malloc(stdin);
+		fscanf(stdin, "%ms",&name);
+		//name = fgets_malloc(stdin);
 		elec = fetch_electorate(conn, name);
 		if (!elec)
 			printf("Electorate `%s' not found!\n", name);

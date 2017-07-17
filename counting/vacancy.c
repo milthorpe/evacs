@@ -39,7 +39,7 @@ static struct electorate *prompt_for_electorate(PGconn *conn)
 
 	do {
 		printf("Please enter the electorate name to count: ");
-		name = fgets_malloc(stdin);
+		get_next_line(&name);
 		elec = fetch_electorate(conn, name);
 		if (!elec)
 			printf("Electorate `%s' not found!\n", name);
@@ -54,7 +54,7 @@ static bool prompt_for_new_vacancy()
 	char *answer;
 
 	printf("Another Casual Vacancy for this electorate? [n/Y]: ");
-	answer = fgets_malloc(stdin);
+	get_next_line(&answer);
 
 	/* Nothing to do if no candidates deceased. */
 	if (answer[0] != 'n' && answer[0] != 'N') {
@@ -78,11 +78,12 @@ static unsigned int match_name(struct candidate *cand, void *name)
 static struct candidate *vacating_candidate(struct cand_list *candidates)
 {
 	struct cand_list *ret;
-	char *name;
+	char *name = NULL;
 
 	do {
 		printf("Please enter the vacating candidate name: ");
-		name = fgets_malloc(stdin);
+		get_next_line(&name);
+		printf("%s\n",name);
 
 		ret = any_candidates(candidates, &match_name, name);
 		if (!ret)
@@ -132,7 +133,7 @@ static unsigned int selected(struct candidate *cand, void *vacating)
 
 	printf("Candidate `%s' from `%s' [y/N]: ",
 	       cand->name, cand->group->name);
-	answer = fgets_malloc(stdin);
+	get_next_line(&answer);
 	if (toupper(answer[0]) == 'Y') {
 		free(answer);
 		/* Reset their status to CONTINUING */
@@ -617,7 +618,7 @@ int main(int argc, char *argv[])
 		/*  free_electorates(e.electorate);*/
 
 		fprintf(stderr,"\nPrinting Scrutiny\n");
-		system((const char*) "/opt/eVACS/bin/print_scrutiny.sh");
+		system((const char*) "./print_scrutiny.sh");
 
 	} while (prompt_for_new_vacancy() == true);
 

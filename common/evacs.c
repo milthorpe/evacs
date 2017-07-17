@@ -151,51 +151,12 @@ static int strip_nl(char *s)
     return(0);
 }
 
-char *fgets_malloc(FILE *stream)
-     /*
-       Returns a pointer to the next line of text read from
-       the stream.
-
-       NOTE: This function allocates memory if end of file
-       was not encountered and no characters were copied to
-       the string. It is the callers responsibility
-       to free it after use. If end of file was encountered
-       then the memory is released before return.
-     */
-{ 
-  char *str;
-  int start=0,empty_size,size=128;
-  
-  str = malloc(size);
-  *str = '\0';
-  empty_size = size;
-  
-  /* Loop until newline or EOF encountered */
-
-  while (1) {
-    if ( fgets(&str[start],empty_size,stream) == NULL ) { /* end-of-file ? */
-      if ( *str == '\0' ) {  /* and nothing in the buffer */
-	free(str);
-	return(NULL);  /* then return NULL*/
-      }
-      else {
-	strip_nl(str);
-	break;   /* otherwise return string */
-      }
-    }
-    
-    if (strip_nl(str))  /* If string contained a newline at the end */
-      break;      /* then return it */
-
-    /* Newline not hit - double buf size and read some more */
-
-    start += size-1;    
-    empty_size = size+1;  /* We score one extra byte due to null terminator */
-    size *= 2;
-    str = realloc(str,size);
-  }
-  
-  return(str);
+ssize_t get_next_line(char** line) {
+  *line = NULL;
+  size_t allocate = 0;
+	int result = getline(line, &allocate, stdin);
+  strip_nl(*line);
+  return result;
 }
 
 extern struct preference_set *unpack_preferences(const char *preference_list)

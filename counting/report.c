@@ -773,24 +773,9 @@ __attribute__((format(printf,2,3)));
 
 static void append_report(char **string, const char *format, ...)
 {
-	int space;
-	char *ptr;
 	va_list arglist;
-
 	va_start(arglist, format);
-	space = vsnprintf(NULL, 0, format, arglist);
-	/* Old glibc, gives bogus return */
-	if (space == -1) space = 1024;
-	else space ++;
-
-	if (*string) {
-		space += strlen(*string);
-		*string = realloc(*string, space);
-		ptr = *string + strlen(*string);
-	} else {
-		ptr = *string = malloc(space);
-	}
-	vsprintf(ptr, format, arglist);	
+	vsprintf_malloc(format, arglist);	
 	va_end(arglist);
 }
 
